@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Bookmark Manager</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --danger:  #ef4444;
+      --danger-hover: #dc2626;
+      --bg:      #f8fafc;
+      --card:    #ffffff;
+      --border:  #e2e8f0;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --tag-bg:  #ede9fe;
+      --tag-text:#6d28d9;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header span { font-size: 1.6rem; }
+
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    /* ---- Card ---- */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--primary); }
+
+    /* ---- Form ---- */
+    .form-row { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .form-row input {
+      flex: 1;
+      min-width: 180px;
+      padding: .55rem .85rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-row input:focus { border-color: var(--primary); }
+    .form-row input::placeholder { color: var(--muted); }
+
+    button {
+      padding: .55rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+    button:active { transform: scale(.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger  { background: var(--danger);  color: #fff; padding: .3rem .7rem; font-size: .8rem; }
+    .btn-danger:hover  { background: var(--danger-hover); }
+
+    /* ---- Search + filter bar ---- */
+    .search-bar { display: flex; gap: .75rem; flex-wrap: wrap; }
+    .search-bar input { flex: 1; min-width: 200px; }
+
+    /* ---- Tags sidebar ---- */
+    .tag-list { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .tag-chip {
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      padding: .25rem .7rem;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color .15s;
+    }
+    .tag-chip:hover, .tag-chip.active { border-color: var(--tag-text); }
+    .tag-chip .count {
+      background: var(--tag-text);
+      color: #fff;
+      border-radius: 999px;
+      padding: 0 .4rem;
+      font-size: .7rem;
+      margin-left: .3rem;
+    }
+    #clear-tag {
+      font-size: .8rem;
+      background: none;
+      color: var(--muted);
+      text-decoration: underline;
+      padding: .25rem 0;
+      display: none;
+    }
+    #clear-tag.visible { display: inline; }
+
+    /* ---- Bookmark list ---- */
+    #bookmark-list { display: grid; gap: 1rem; }
+
+    .bookmark-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+      transition: box-shadow .2s;
+    }
+    .bookmark-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .bookmark-body { flex: 1; min-width: 0; }
+    .bookmark-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--primary);
+      text-decoration: none;
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bookmark-title:hover { text-decoration: underline; }
+    .bookmark-url {
+      font-size: .78rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: .2rem 0 .5rem;
+    }
+    .bookmark-meta { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    .bookmark-date { font-size: .75rem; color: var(--muted); }
+    .bm-tag {
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .bm-tag:hover { opacity: .8; }
+
+    #empty-msg {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem;
+      display: none;
+    }
+    #empty-msg.visible { display: block; }
+
+    /* ---- Toast ---- */
+    #toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #1e293b;
+      color: #fff;
+      padding: .75rem 1.25rem;
+      border-radius: 8px;
+      font-size: .9rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+      z-index: 999;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ---- Loading ---- */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.1rem; }
+      .form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🔖</span>
+  <h1>Personal Bookmark Manager</h1>
+</header>
+
+<main>
+
+  <!-- Add bookmark -->
+  <div class="card">
+    <h2>➕ Add Bookmark</h2>
+    <form id="add-form" autocomplete="off">
+      <div class="form-row">
+        <input id="url-input"   type="url"  placeholder="https://example.com" required />
+        <input id="title-input" type="text" placeholder="Title (auto-fetched if empty)" />
+      </div>
+      <div class="form-row">
+        <input id="tags-input" type="text" placeholder="Tags (comma-separated, e.g. python, tutorial)" />
+        <button type="submit" class="btn-primary" id="add-btn">Add Bookmark</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Search + Filter -->
+  <div class="card">
+    <h2>🔍 Search & Filter</h2>
+    <div class="search-bar form-row" style="margin-bottom:.75rem">
+      <input id="search-input" type="text" placeholder="Search by title or URL…" />
+      <button class="btn-primary" id="search-btn">Search</button>
+      <button class="btn-primary" id="refresh-btn" style="background:#64748b">All</button>
+    </div>
+    <div>
+      <strong style="font-size:.85rem;color:var(--muted);">Filter by tag:</strong>
+      <button id="clear-tag">✕ clear filter</button>
+    </div>
+    <div class="tag-list" id="tag-list" style="margin-top:.5rem"></div>
+  </div>
+
+  <!-- Bookmarks -->
+  <div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+      <strong id="result-label" style="color:var(--muted);font-size:.9rem">All bookmarks</strong>
+      <span id="count-label" style="color:var(--muted);font-size:.85rem"></span>
+    </div>
+    <div id="bookmark-list"></div>
+    <p id="empty-msg">No bookmarks found.</p>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const API = '/api';
+  let activeTag = null;
+  let lastSearch = '';
+
+  /* ---------- Utilities ---------- */
+  function showToast(msg, duration = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  /* ---------- Tags ---------- */
+  async function loadTags() {
+    const res = await fetch(`${API}/tags`);
+    const tags = await res.json();
+    const container = document.getElementById('tag-list');
+    container.innerHTML = '';
+    tags.forEach(t => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip' + (activeTag === t.name ? ' active' : '');
+      chip.dataset.tag = t.name;
+      chip.innerHTML = `${t.name}<span class="count">${t.count}</span>`;
+      chip.addEventListener('click', () => filterByTag(t.name));
+      container.appendChild(chip);
+    });
+  }
+
+  function filterByTag(name) {
+    if (activeTag === name) {
+      activeTag = null;
+      document.getElementById('clear-tag').classList.remove('visible');
+    } else {
+      activeTag = name;
+      document.getElementById('clear-tag').classList.add('visible');
+    }
+    lastSearch = '';
+    document.getElementById('search-input').value = '';
+    loadBookmarks();
+    loadTags();
+  }
+
+  document.getElementById('clear-tag').addEventListener('click', () => filterByTag(activeTag));
+
+  /* ---------- Bookmarks ---------- */
+  function renderBookmarks(bookmarks) {
+    const list = document.getElementById('bookmark-list');
+    const empty = document.getElementById('empty-msg');
+    const count = document.getElementById('count-label');
+    list.innerHTML = '';
+    count.textContent = `${bookmarks.length} bookmark${bookmarks.length !== 1 ? 's' : ''}`;
+
+    if (!bookmarks.length) {
+      empty.classList.add('visible');
+      return;
+    }
+    empty.classList.remove('visible');
+
+    bookmarks.forEach(b => {
+      const card = document.createElement('div');
+      card.className = 'bookmark-card';
+
+      const tagHtml = (b.tags || []).map(tag =>
+        `<span class="bm-tag" data-tag="${tag}">${tag}</span>`
+      ).join('');
+
+      card.innerHTML = `
+        <div class="bookmark-body">
+          <a class="bookmark-title" href="${b.url}" target="_blank" rel="noopener noreferrer" title="${b.title}">${b.title || b.url}</a>
+          <div class="bookmark-url">${b.url}</div>
+          <div class="bookmark-meta">
+            <span class="bookmark-date">${formatDate(b.created_at)}</span>
+            ${tagHtml}
+          </div>
+        </div>
+        <button class="btn-danger" data-id="${b.id}" title="Delete bookmark">🗑</button>
+      `;
+
+      card.querySelectorAll('.bm-tag').forEach(chip =>
+        chip.addEventListener('click', () => filterByTag(chip.dataset.tag))
+      );
+      card.querySelector('.btn-danger').addEventListener('click', () => deleteBookmark(b.id));
+      list.appendChild(card);
+    });
+  }
+
+  async function loadBookmarks() {
+    const params = new URLSearchParams();
+    if (activeTag)   params.set('tag', activeTag);
+    if (lastSearch)  params.set('q', lastSearch);
+
+    const label = document.getElementById('result-label');
+    if (activeTag)        label.textContent = `Tag: ${activeTag}`;
+    else if (lastSearch)  label.textContent = `Search: "${lastSearch}"`;
+    else                  label.textContent = 'All bookmarks';
+
+    const res = await fetch(`${API}/bookmarks?${params}`);
+    const data = await res.json();
+    renderBookmarks(data);
+  }
+
+  /* ---------- Add ---------- */
+  document.getElementById('add-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('add-btn');
+    const url   = document.getElementById('url-input').value.trim();
+    const title = document.getElementById('title-input').value.trim();
+    const tags  = document.getElementById('tags-input').value.trim();
+
+    btn.innerHTML = '<span class="spinner"></span> Adding…';
+    btn.disabled = true;
+
+    const res = await fetch(`${API}/bookmarks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, title, tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [] }),
+    });
+
+    btn.textContent = 'Add Bookmark';
+    btn.disabled = false;
+
+    if (res.ok) {
+      document.getElementById('url-input').value   = '';
+      document.getElementById('title-input').value = '';
+      document.getElementById('tags-input').value  = '';
+      showToast('✅ Bookmark added!');
+      await Promise.all([loadBookmarks(), loadTags()]);
+    } else {
+      const err = await res.json();
+      showToast(`❌ ${err.error || 'Failed to add bookmark'}`);
+    }
+  });
+
+  /* ---------- Search ---------- */
+  async function runSearch() {
+    activeTag = null;
+    document.getElementById('clear-tag').classList.remove('visible');
+    lastSearch = document.getElementById('search-input').value.trim();
+    await loadBookmarks();
+    await loadTags();
+  }
+
+  document.getElementById('search-btn').addEventListener('click', runSearch);
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runSearch();
+  });
+  document.getElementById('refresh-btn').addEventListener('click', async () => {
+    activeTag = null;
+    lastSearch = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('clear-tag').classList.remove('visible');
+    await loadBookmarks();
+    await loadTags();
+  });
+
+  /* ---------- Delete ---------- */
+  async function deleteBookmark(id) {
+    if (!confirm('Delete this bookmark?')) return;
+    const res = await fetch(`${API}/bookmarks/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast('🗑 Bookmark deleted');
+      await Promise.all([loadBookmarks(), loadTags()]);
+    } else {
+      showToast('❌ Failed to delete bookmark');
+    }
+  }
+
+  /* ---------- Init ---------- */
+  Promise.all([loadBookmarks(), loadTags()]);
+</script>
+
+</body>
+</html>
